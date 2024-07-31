@@ -1,0 +1,4 @@
+*.pcap
+dist
+go-ytds
+build
