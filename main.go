@@ -11,14 +11,14 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
+	pcap "github.com/gopacket/gopacket/pcap"
 	"github.com/miekg/dns"
 )
 
 var (
-	domainStore = make(map[string]struct{})
+	domainStore = make(map[string][]net.IP)
 	mutex       sync.Mutex
 	filters     filterFlag
 )
@@ -41,6 +41,10 @@ func main() {
 	flag.Var(&filters, "filter", "Filter stored domains (can be used multiple times)")
 
 	flag.Parse()
+
+	if len(filters) == 0 {
+		filters = append(filters, "googlevideo.com")
+	}
 
 	if *listDevices {
 		devices, err := pcap.FindAllDevs()
@@ -108,11 +112,13 @@ func storeDomainNames(packet gopacket.Packet) {
 		dns, _ := dnsLayer.(*layers.DNS)
 		mutex.Lock()
 		for _, question := range dns.Questions {
-			domainStore[string(question.Name)] = struct{}{}
+			domainStore[string(question.Name)] = []net.IP{}
 		}
 		for _, answer := range dns.Answers {
 			if answer.Type == layers.DNSTypeA {
-				domainStore[string(answer.Name)] = struct{}{}
+				domain := string(answer.Name)
+				ip := answer.IP
+				domainStore[domain] = append(domainStore[domain], ip)
 			}
 		}
 		mutex.Unlock()
@@ -179,7 +185,7 @@ func handleAXFRRequest(w dns.ResponseWriter, req *dns.Msg) {
 
 	log.Println("Acquiring lock for domainStore")
 	mutex.Lock()
-	for domain := range domainStore {
+	for domain, ips := range domainStore {
 		normalizedDomain := normalizeDomain(domain)
 		if !strings.HasSuffix(normalizedDomain, requestedDomain) {
 			log.Printf("Skipping domain: %s (does not match requested domain %s)", normalizedDomain, requestedDomain)
@@ -191,14 +197,15 @@ func handleAXFRRequest(w dns.ResponseWriter, req *dns.Msg) {
 			continue
 		}
 
-		log.Printf("Processing domain: %s", normalizedDomain)
-		rr, err := dns.NewRR(fmt.Sprintf("%s IN A 127.0.0.1", normalizedDomain))
-		if err != nil {
-			log.Printf("Error creating DNS RR for domain %s: %v", normalizedDomain, err)
-			continue
+		for _, ip := range ips {
+			rr, err := dns.NewRR(fmt.Sprintf("%s IN A %s", normalizedDomain, ip))
+			if err != nil {
+				log.Printf("Error creating DNS RR for domain %s: %v", normalizedDomain, err)
+				continue
+			}
+			m.Answer = append(m.Answer, rr)
+			log.Printf("Added RR: %s", rr.String())
 		}
-		m.Answer = append(m.Answer, rr)
-		log.Printf("Added RR: %s", rr.String())
 	}
 	mutex.Unlock()
 	log.Println("Released lock for domainStore")
