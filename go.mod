@@ -3,7 +3,7 @@ module github.com/skrashevich/go-ytds
 go 1.22.5
 
 require (
-	github.com/gopacket/gopacket v1.2.0
+	github.com/google/gopacket v1.1.19
 	github.com/miekg/dns v1.1.61
 )
 
