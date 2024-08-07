@@ -146,8 +146,8 @@ func printDNSInfo(packet gopacket.Packet) string {
 
 func startDNSServer(port uint) {
 	dns.HandleFunc(".", handleAXFRRequest)
-	server := &dns.Server{Addr: fmt.Sprintf(":%d", port), Net: "udp"}
-	fmt.Println("Starting DNS server...")
+	server := &dns.Server{Addr: fmt.Sprintf(":%d", port), Net: "tcp"}
+	fmt.Printf("Starting DNS server on port %d...", port)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("Failed to start DNS server on port %d: %v", port, err)
