@@ -86,6 +86,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG_NAME }}
-          files: dist/archives/*.tar.gz
+          files: dist/archives/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
