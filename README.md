@@ -46,13 +46,13 @@ This project is a DNS traffic monitoring tool written in Go. It captures and ana
 1. **List Available Devices:**
 
    ```sh
-   ./dns-monitor -list
+   go-ytds -list
    ```
 
 2. **Capture DNS Traffic on a Specific Device:**
 
    ```sh
-   ./dns-monitor -device en0 -dnsport 5353 -filter googlevideo.com -filter youtube.com
+   sudo go-ytds -device en0 -dnsport 5353 -filter googlevideo.com -filter youtube.com
    ```
 
 3. **Get Captured Domain Names**
